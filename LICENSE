@@ -1,0 +1,40 @@
+MIT License
+
+Copyright (c) 2026 Talk Board contributors
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+----------------------------------------------------------------------
+PICTURES (symbols.json)
+
+The MIT licence above covers the app's code only. The built-in pictures
+are third-party works under their own licences:
+
+- Mulberry Symbols, by Straight Street Ltd,
+  https://mulberrysymbols.org
+  Licensed under Creative Commons Attribution-ShareAlike 2.0 UK:
+  https://creativecommons.org/licenses/by-sa/2.0/uk/
+
+- OpenMoji, the open-source emoji and icon project, (c) HfG Schwäbisch Gmünd,
+  https://openmoji.org
+  Licensed under Creative Commons Attribution-ShareAlike 4.0:
+  https://creativecommons.org/licenses/by-sa/4.0/
+
+Some pictures were optimised (made smaller) for the web; their shapes are unchanged.
+If you share modified versions of these pictures, share them under the same licence.

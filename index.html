@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Talk Board</title>
+<meta name="description" content="A free talk board for children who are learning to communicate. Works offline.">
+<meta name="theme-color" content="#f7f5f0">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: calm, tender, practical; a tool a child holds, not a website.
+   IDEA: a laminated communication board on a classroom table.
+   PICTURE: the board itself fills the screen from the first second.
+   COLOUR and TYPE: warm paper ground, Fitzgerald Key word colours softened, one soft red strip; Atkinson Hyperlegible.
+   LAYOUT: message bar on top, word grid with the always-there strip at right, page tabs below. */
+:root{color-scheme:light dark;
+--bg:light-dark(#f7f5f0,#1d1f22);--card:light-dark(#ffffff,#2a2d31);--ink:light-dark(#232323,#f1efe9);--quiet:light-dark(#62605b,#b7b3aa);
+--line:light-dark(#cfcbc2,#4a4d52);--accent:light-dark(#2f63ad,#8fb6ef);--model:light-dark(#1f5fd1,#7fb0ff);
+--strip:light-dark(#f6dcdc,#4a2b2b);--stripb:light-dark(#c85a5a,#e08a8a);
+--p:light-dark(#fff3c4,#4a4220);--pb:light-dark(#c9a227,#d9b84a);
+--a:light-dark(#ddf1da,#243d22);--ab:light-dark(#4e9a48,#7cc276);
+--d:light-dark(#dce8f7,#1f3350);--db:light-dark(#4a7cc0,#86afe6);
+--s:light-dark(#f6ddeb,#47273a);--sb:light-dark(#b65a8c,#e08cba);
+--t:light-dark(#fce3cc,#4a3220);--tb:light-dark(#d07a2e,#eba066)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.4 "Atkinson Hyperlegible",system-ui,sans-serif;overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+#board{height:100dvh;display:flex;flex-direction:column;gap:8px;padding:10px max(10px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left))}
+.bar{display:flex;gap:8px;height:72px;flex:none}
+#msg{flex:1;display:flex;gap:6px;align-items:center;overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:0 10px;text-align:left}
+#msg .chip{flex:none;padding:6px 10px;border-radius:8px;border:1px solid;font-size:22px}
+#msg .hint{color:var(--quiet);font-size:16px}
+.bb{flex:none;width:84px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-size:18px}
+.bb.speak{width:104px;border:2px solid var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent);font-weight:700}
+#gate{position:relative;flex:none;width:72px;border-radius:12px;border:1px dashed var(--line);background:transparent;font-size:12px;color:var(--quiet);line-height:1.2;touch-action:none}
+#gate svg{position:absolute;inset:6px;width:calc(100% - 12px);height:calc(100% - 12px);pointer-events:none}
+#gate circle{fill:none;stroke:var(--accent);stroke-width:4;stroke-dasharray:157;stroke-dashoffset:157;transform:rotate(-90deg);transform-origin:50% 50%}
+#gate.holding circle{transition:stroke-dashoffset 2s linear;stroke-dashoffset:0}
+#banner{display:none;align-items:center;gap:12px;border:2px solid var(--model);background:color-mix(in srgb,var(--model) 10%,transparent);border-radius:12px;padding:8px 14px}
+#banner.on{display:flex}
+#banner b{display:block}#banner span{color:var(--quiet);font-size:15px}
+#banner button{margin-left:auto;flex:none;border:1px solid var(--line);background:var(--card);border-radius:10px;min-height:44px;padding:0 16px}
+.main{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 128px;gap:8px;min-height:0}
+#grid{display:grid;grid-template-columns:repeat(var(--cols,8),minmax(0,1fr));gap:6px;overflow-y:auto;min-height:0}
+.cell{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px;border-radius:12px;border:1.5px solid;font-size:clamp(14px,2.1vw,22px);overflow:hidden;transition:transform .08s}
+.cell:active{transform:scale(.96)}
+.cell img{flex:1;min-height:0;width:100%;object-fit:cover;border-radius:8px}
+.cell img.sym{object-fit:contain;padding:2px}
+.cell .emo{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:clamp(26px,4vw,44px);line-height:1}
+#msg .chip{display:flex;align-items:center;gap:6px}#msg .chip img{width:26px;height:26px;object-fit:contain;border-radius:4px}#msg .chip .emo{font-style:normal;font-size:22px}
+#strip{min-height:0;grid-template-rows:repeat(5,minmax(0,1fr));grid-auto-rows:unset}#strip button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:0;overflow:hidden;padding:4px}#strip img{flex:0 1 auto;min-height:0;max-height:48px;height:45%;width:auto}
+.credit{font-size:13px;color:var(--quiet)}
+.cell span{overflow:hidden;max-width:100%;text-align:center;line-height:1.1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow-wrap:anywhere}
+#msg .hint{white-space:nowrap}
+.cell.model{border-width:4px;border-color:var(--model)!important}
+.cell.dim{opacity:.42}
+.P{background:var(--p);border-color:var(--pb)}.A{background:var(--a);border-color:var(--ab)}.D{background:var(--d);border-color:var(--db)}.S{background:var(--s);border-color:var(--sb)}.T{background:var(--t);border-color:var(--tb)}
+#strip{display:grid;grid-auto-rows:1fr;gap:6px}
+#strip button{border-radius:12px;border:2px solid var(--stripb);background:var(--strip);font-weight:700;font-size:19px}
+#tabs{display:flex;gap:6px;height:64px;flex:none;overflow-x:auto;scrollbar-width:thin}
+#tabs button{flex:none;min-width:108px;display:flex;align-items:center;justify-content:center;gap:6px;padding:0 12px;border-radius:12px;border:1px solid var(--line);background:var(--card);font-size:17px;white-space:nowrap}
+#tabs img{width:34px;height:34px;object-fit:contain}
+#tabs button[aria-pressed=true]{border:2px solid var(--line);background:color-mix(in srgb,var(--line) 55%,transparent);font-weight:700}
+/* adult area */
+.panel{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;-webkit-user-select:text;user-select:text}
+.panel.on{display:flex}
+.phead{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}
+.phead h2{margin:0;font-size:22px}
+.back{border:1px solid var(--line);background:var(--card);border-radius:10px;min-height:44px;padding:0 16px}
+.pbody{flex:1;overflow-y:auto;padding:18px max(16px,4vw) 40px;display:flex;flex-direction:column;gap:14px;max-width:980px;width:100%;margin:0 auto}
+.note{color:var(--quiet);margin:0}
+.mcard{text-align:left;border:1px solid var(--line);background:var(--card);border-radius:14px;padding:16px 18px;min-height:64px}
+.mcard b{display:block;font-size:19px}.mcard span{color:var(--quiet)}
+.primary{border:2px solid var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent);border-radius:12px;min-height:48px;padding:0 20px;font-weight:700}
+.plain{border:1px solid var(--line);background:var(--card);border-radius:12px;min-height:44px;padding:0 16px}
+.danger{color:var(--stripb)}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chips button{border:1px solid var(--line);background:var(--card);border-radius:999px;min-height:44px;padding:0 16px}
+.chips button[aria-pressed=true]{border:2px solid var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent);font-weight:700}
+#ewords{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));grid-auto-rows:96px;gap:8px}
+#ewords .hidden{opacity:.35;border-style:dashed}
+label.f{display:flex;flex-direction:column;gap:4px;font-weight:700;font-size:15px}
+input[type=text],input[type=password],textarea,select{font:inherit;font-size:16px;font-weight:400;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-height:44px;width:100%}
+textarea{min-height:70px;resize:vertical}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.row>*{flex:1}
+.tog{display:flex;justify-content:space-between;align-items:center;gap:12px;border:1px solid var(--line);background:var(--card);border-radius:12px;padding:10px 14px;min-height:56px}
+.tog input{width:26px;height:26px;flex:none}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.prow{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:8px;align-items:center}
+@media(max-width:600px){.prow{grid-template-columns:minmax(0,1fr) auto}.prow input:nth-child(2){grid-column:1}}
+h3{margin:10px 0 0;font-size:18px}
+/* dialog */
+.scrim{position:fixed;inset:0;background:rgb(0 0 0/.4);display:none;align-items:center;justify-content:center;padding:16px;z-index:5}
+.scrim.on{display:flex}
+.dlg{background:var(--bg);border-radius:18px;width:min(560px,100%);max-height:92dvh;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:12px;-webkit-user-select:text;user-select:text}
+.dlg h2{margin:0;font-size:22px}
+.pic{display:flex;gap:12px;align-items:center}
+.pic .thumb{width:96px;height:96px;flex:none;border:1px solid var(--line);border-radius:12px;overflow:hidden;display:grid;place-items:center;color:var(--quiet);font-size:14px;background:var(--card)}
+.pic .thumb img{width:100%;height:100%;object-fit:cover}
+.pic .btns{display:flex;flex-direction:column;gap:6px;flex:1}
+.filebtn{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.err{color:var(--stripb);min-height:1.2em;margin:0}
+#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:10px;display:none;z-index:9}
+#toast.on{display:block}
+@media(max-width:700px){#board{gap:6px}.bar{height:60px}.bb{width:64px;font-size:15px}.bb.speak{width:76px}#gate{width:60px}.main{grid-template-columns:minmax(0,1fr) 88px}#strip button{font-size:15px}#tabs{height:56px}#tabs button{font-size:14px;min-width:92px}#tabs img{width:28px;height:28px}}
+@media(max-width:600px){.bb{width:56px;font-size:14px}.bb.speak{width:66px}#gate{width:54px;font-size:11px}#msg .chip{font-size:18px}.main{grid-template-columns:minmax(0,1fr) 78px}#tabs{height:56px}#banner span{font-size:13px}}
+@media(prefers-reduced-motion:reduce){.cell{transition:none}#gate.holding circle{transition:stroke-dashoffset 2s steps(1)}}
+
+#tour{position:fixed;inset:0;z-index:20;display:none}
+#tour.on{display:block}
+#tspot{position:absolute;border-radius:14px;box-shadow:0 0 0 9999px rgb(0 0 0/.58);outline:3px solid #fff;transition:all .25s ease;pointer-events:none}
+#tspot.none{width:0!important;height:0!important;left:50%!important;top:50%!important;outline:0}
+#tcard{position:absolute;width:min(420px,calc(100vw - 24px));background:var(--bg);color:var(--ink);border-radius:16px;padding:18px 18px 14px;box-shadow:0 10px 30px rgb(0 0 0/.3);-webkit-user-select:text;user-select:text}
+#tcard h2{margin:0 0 6px;font-size:21px}#tcard p{margin:0 0 14px;font-size:16.5px}
+#tcard .tnav{display:flex;gap:8px;align-items:center}#tcard .tnav .n{margin-right:auto;color:var(--quiet);font-size:14px}
+#tcard button{min-height:44px;border-radius:10px;padding:0 16px;border:1px solid var(--line);background:var(--card)}
+#tcard button.go{border:2px solid var(--accent);background:color-mix(in srgb,var(--accent) 14%,transparent);font-weight:700}
+#guide{flex:none;width:64px;border-radius:12px;border:1px dashed var(--line);background:transparent;font-size:12px;color:var(--quiet);line-height:1.2}
+@media(max-width:600px){#guide{width:48px;font-size:11px}}
+@media(prefers-reduced-motion:reduce){#tspot{transition:none}}
+#sound{display:none;border:2px solid var(--stripb);background:var(--strip);border-radius:12px;padding:10px 14px;gap:12px;align-items:flex-start}
+#sound.on{display:flex}#sound b{display:block;font-size:17px}#sound ul{margin:4px 0 0;padding-left:20px;font-size:15px}
+#sound button{flex:none;margin-left:auto;min-height:44px;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:0 14px}
+</style>
+</head>
+<body>
+<main id="board" aria-label="Talk board">
+  <div class="bar">
+    <button id="msg" aria-label="Message. Tap to speak it."><span class="hint">Tap words to talk</span></button>
+    <button class="bb" id="del">Delete</button>
+    <button class="bb" id="clr">Clear</button>
+    <button class="bb speak" id="spk">Speak</button>
+    <button id="guide" aria-label="How to use this board">How to<br>use</button>
+    <button id="gate" aria-label="Adults: press and hold for two seconds"><svg viewBox="0 0 60 60" aria-hidden="true"><circle cx="30" cy="30" r="25"/></svg>Adults<br>(hold)</button>
+  </div>
+  <div id="sound" role="alert"><div><b>No sound is coming out</b><ul>
+    <li>Turn the volume up, and switch off silent or "do not disturb" mode. On iPhone, check the ring/silent switch on the side.</li>
+    <li>Use Chrome on Android, or Safari on iPad and iPhone.</li>
+    <li>Android: check Settings &gt; Accessibility &gt; Text-to-speech has a voice installed.</li>
+    <li>Then tap a word again. You can also pick another voice in the adult area under Voice.</li></ul></div>
+    <button id="soundx">OK</button></div>
+  <div id="banner" role="status"><div><b id="bname"></b><span id="btip"></span></div><button id="bend">End</button></div>
+  <div class="main">
+    <div id="grid" role="group" aria-label="Words"></div>
+    <div id="strip" role="group" aria-label="Always there"></div>
+  </div>
+  <nav id="tabs" aria-label="Pages"></nav>
+</main>
+
+<section class="panel" id="p-menu" aria-label="Adult menu">
+  <div class="phead"><button class="back" data-go="board">Back to board</button><h2>Adult menu</h2></div>
+  <div class="pbody">
+    <button class="mcard" id="mguide"><b>How to use Talk Board</b><span>A one-minute tour of the board.</span></button>
+    <button class="mcard" data-go="model"><b>Model with me</b><span>Highlight words to show during a daily routine.</span></button>
+    <button class="mcard" data-go="edit"><b>Edit words and pages</b><span>Add photos, rename, hide or add words.</span></button>
+    <button class="mcard" data-go="passport"><b>How I communicate</b><span>A profile to share with teachers, therapists and family.</span></button>
+    <button class="mcard" data-go="settings"><b>Voice, lock and screen</b><span>Speech speed, voice, an optional PIN, full screen.</span></button>
+    <p class="note" id="savenote"></p>
+    <button class="primary" data-go="board">Done, back to the board</button>
+  </div>
+</section>
+
+<section class="panel" id="p-model" aria-label="Model with me">
+  <div class="phead"><button class="back" data-go="menu">Back</button><h2>Model with me</h2></div>
+  <div class="pbody">
+    <p class="note">Pick a routine. The board highlights a few words for you to point to while you talk. Your child doesn't have to copy you. Seeing you use the board is how they learn it.</p>
+    <div id="routines" style="display:flex;flex-direction:column;gap:10px"></div>
+  </div>
+</section>
+
+<section class="panel" id="p-edit" aria-label="Edit words and pages">
+  <div class="phead"><button class="back" data-go="menu">Back</button><h2>Edit words and pages</h2></div>
+  <div class="pbody">
+    <div class="chips" id="epages"></div>
+    <div class="row"><p class="note" id="enote" style="flex:3"></p><button class="primary" id="eadd" style="flex:none">Add a word</button></div>
+    <div id="ewords"></div>
+  </div>
+</section>
+
+<section class="panel" id="p-passport" aria-label="How I communicate">
+  <div class="phead"><button class="back" data-go="menu">Back</button><h2>How I communicate</h2></div>
+  <div class="pbody">
+    <p class="note">Write it in your child's voice. Share it with new teachers, therapists, carers and family.</p>
+    <label class="f">Child's name<input type="text" id="pname"></label>
+    <label class="f">A few words about me<textarea id="pintro"></textarea></label>
+    <h3>When I do this, I usually mean...</h3>
+    <div id="pentries" style="display:flex;flex-direction:column;gap:8px"></div>
+    <button class="plain" id="padd" style="align-self:flex-start">Add another</button>
+    <h3>What helps when I'm upset</h3>
+    <textarea id="pupset" aria-label="What helps when I'm upset, one per line"></textarea>
+    <h3>Things I love</h3>
+    <textarea id="plove" aria-label="Things I love, one per line"></textarea>
+    <p class="note">One item per line.</p>
+    <div class="row" style="flex:none"><button class="primary" id="pexport">Print or save as PDF</button><button class="plain" id="pdl">Download page</button><button class="plain" id="pcopy">Copy as text</button></div>
+  </div>
+</section>
+
+<section class="panel" id="p-settings" aria-label="Settings">
+  <div class="phead"><button class="back" data-go="menu">Back</button><h2>Voice, lock and screen</h2></div>
+  <div class="pbody">
+    <button class="primary" id="scalm" style="align-self:flex-start">Use the calm voice</button>
+    <p class="note">Picks the softest, warmest voice on this device, a little slower and gentle. Best voices: on iPhone or iPad, download "Veena" or "Samantha (Enhanced)" in Settings &gt; Accessibility &gt; Spoken Content &gt; Voices. On Android, pick a Google voice in Settings &gt; Text-to-speech.</p>
+    <label class="f">Voice<select id="svoice"></select></label>
+    <label class="f">Speech speed <span id="srate-v"></span><input type="range" id="srate" min="0.5" max="1.5" step="0.1"></label>
+    <label class="f">Voice pitch <span id="spitch-v"></span><input type="range" id="spitch" min="0.5" max="1.6" step="0.1"></label>
+    <button class="plain" id="stest" style="align-self:flex-start">Hear a preview</button>
+    <label class="tog">Say each word when tapped<input type="checkbox" id="seach"></label>
+    <label class="tog">Show pictures on buttons<input type="checkbox" id="spics"></label>
+    <p class="credit">Built-in pictures: <a href="https://mulberrysymbols.org" target="_blank" rel="noopener">Mulberry Symbols</a> (CC BY-SA 2.0 UK), an AAC symbol set, and <a href="https://openmoji.org" target="_blank" rel="noopener">OpenMoji</a> (CC BY-SA 4.0). Your own photos replace them.</p>
+    <h3>Adult lock</h3>
+    <p class="note" id="spinnote"></p>
+    <div class="row" style="flex:none"><button class="plain" id="spin">Set a PIN</button><button class="plain danger" id="sunpin">Remove PIN</button></div>
+    <h3>Screen</h3>
+    <button class="plain" id="sfull" style="align-self:flex-start">Go full screen</button>
+    <p class="note">On a tablet, also turn on screen pinning (Android) or Guided Access (iPad) to keep your child in the board.</p>
+    <h3>Back up and move</h3>
+    <p class="note">Your words, photos and passport are kept in this browser. Download a backup file to keep them safe or move them to another tablet.</p>
+    <div class="row" style="flex:none"><button class="plain" id="sbackup">Download backup</button><span class="plain filebtn">Restore from backup<input type="file" accept=".json,application/json" id="srestore"></span></div>
+    <h3>Start over</h3>
+    <button class="plain danger" id="sreset" style="align-self:flex-start">Reset words to the starting set</button>
+  </div>
+</section>
+
+<div class="scrim" id="d-word" role="dialog" aria-modal="true" aria-labelledby="wtitle">
+  <div class="dlg">
+    <h2 id="wtitle">Add a word</h2>
+    <div class="pic"><div class="thumb" id="wthumb">No picture</div>
+      <div class="btns"><span class="plain filebtn">Use your own photo<input type="file" accept="image/*" id="wfile"></span><button class="plain" id="wnopic">Remove picture</button></div></div>
+    <label class="f">Word on the button<input type="text" id="wlabel" maxlength="30"></label>
+    <label class="f">Say it as (optional)<input type="text" id="wspoken" maxlength="80"></label>
+    <label class="f">Or use an emoji as the picture (optional)<input type="text" id="wemoji" maxlength="16" placeholder="For example 🍦 or 🚌"></label>
+    <div><b style="font-size:15px">Word type (sets the colour)</b><div class="chips" id="wtypes" style="margin-top:6px"></div></div>
+    <label class="tog">Hide from the board<input type="checkbox" id="whide"></label>
+    <p class="err" id="werr"></p>
+    <div class="row"><button class="plain danger" id="wdel">Delete word</button><button class="plain" id="wcancel">Cancel</button><button class="primary" id="wsave">Save word</button></div>
+  </div>
+</div>
+
+<div class="scrim" id="d-pin" role="dialog" aria-modal="true" aria-labelledby="pintitle">
+  <div class="dlg" style="width:min(380px,100%)">
+    <h2 id="pintitle">Enter the adult PIN</h2>
+    <input type="password" inputmode="numeric" maxlength="4" id="pinin" autocomplete="off" aria-label="4-digit PIN">
+    <p class="err" id="pinerr"></p>
+    <div class="row"><button class="plain" id="pincancel">Cancel</button><button class="primary" id="pinok">OK</button></div>
+  </div>
+</div>
+<div id="toast" role="status"></div>
+<div id="tour" role="dialog" aria-modal="true" aria-labelledby="ttitle"><div id="tspot"></div>
+  <div id="tcard"><h2 id="ttitle"></h2><p id="ttext"></p>
+  <div class="tnav"><span class="n" id="tnum"></span><button id="tskip">Close</button><button id="tback">Back</button><button class="go" id="tnext">Next</button></div></div></div>
+
+<script>
+{
+const CORE=[["I","P"],["want","A"],["go","A"],["like","A"],["more","D"],["not","S"],["yes","S"],["no","S"],
+["you","P"],["eat","A"],["drink","A"],["play","A"],["big","D"],["little","D"],["hello","S"],["bye","S"],
+["my","P"],["look","A"],["get","A"],["make","A"],["in","D"],["out","D"],["please","S"],["what","S"],
+["it","P"],["open","A"],["put","A"],["turn","A"],["on","D"],["off","D"],["where","S"],["again","D"],
+["that","P"],["come","A"],["feel","A"],["need","A"],["up","D"],["down","D"],["hot","D"],["cold","D"],
+["we","P"],["do","A"],["see","A"],["finished","D"],["different","D"],["here","D"],["there","D"],["thank you","S"]];
+// Fringe vocabulary, grouped by topic. Each word: [label, type, spoken form if different].
+const VOCAB=[["more","More core",[["he","P"],["she","P"],["they","P"],["me","P"],["your","P"],["this","P"],["those","P"],["someone","P"],["everyone","P"],["can","A"],["will","A"],["is","A"],["are","A"],["have","A"],["help","A"],["give","A"],["stop","A"],["wait","A"],["let's","A"],["try","A"],["think","A"],["know","A"],["say","A"],["tell","A"],["use","A"],["listen","A"],["watch","A"],["find","A"],["show","A"],["hold","A"],["take","A"],["keep","A"],["leave","A"],["all","D"],["some","D"],["too","D"],["very","D"],["now","D"],["later","D"],["before","D"],["after","D"],["with","D"],["for","D"],["to","D"],["of","D"],["and","D"],["but","D"],["because","D"],["same","D"],["ready","D"],["good","D"],["bad","D"],["nice","D"],["fun","D"],["done","D"],["right","D"],["wrong","D"],["who","S"],["when","S"],["why","S"],["how","S"],["can't","S"],["don't","S"],["mine","S"]]],["chat","Chat",[["hi","S"],["how are you?","S","How are you?"],["I'm fine","S","I'm fine"],["my turn","S","My turn"],["your turn","S","Your turn"],["I don't know","S","I don't know"],["wait please","S","Wait please"],["sorry","S"],["okay","S"],["wow","S"],["uh oh","S","uh oh"],["good job","S","Good job"],["I love you","S","I love you"],["excuse me","S","Excuse me"],["look at me","S","Look at me"],["my name is","S","My name is"],["I need help","S","I need help"],["leave me alone","S","Please leave me alone"],["all done","S","All done"],["come here","S","Come here"],["go away","S","Go away please"],["that's funny","S","That's funny"],["I like it","S","I like it"],["one more","S","One more please"]]],["feelings","Feelings",[["happy","D"],["sad","D"],["angry","D"],["scared","D"],["tired","D"],["hurt","D"],["sick","D"],["excited","D"],["calm","D"],["bored","D"],["worried","D"],["frustrated","D"],["silly","D"],["shy","D"],["proud","D"],["surprised","D"],["lonely","D"],["hungry","D"],["thirsty","D"],["hot","D"],["cold","D"],["okay","D"],["loved","D"],["confused","D"]]],["people","People",[["Mum","P"],["Dad","P"],["teacher","P"],["friend","P"],["Grandma","P"],["Grandad","P"],["brother","P"],["sister","P"],["baby","P"],["boy","P"],["girl","P"],["man","P"],["woman","P"],["doctor","P"],["nurse","P"],["family","P"],["aunt","P"],["uncle","P"],["cousin","P"],["therapist","P"],["police","P"],["bus driver","P"]]],["body","Body",[["head","T"],["hair","T"],["eyes","T"],["ears","T"],["nose","T"],["mouth","T"],["teeth","T"],["tongue","T"],["face","T"],["neck","T"],["arm","T"],["hand","T"],["fingers","T"],["tummy","T"],["back","T"],["leg","T"],["knee","T"],["foot","T"],["toes","T"],["bottom","T"],["skin","T"],["throat","T"]]],["food","Food",[["water","T"],["juice","T"],["milk","T"],["apple","T"],["banana","T"],["biscuit","T"],["rice","T"],["bread","T"],["breakfast","T"],["lunch","T"],["dinner","T"],["snack","T"],["egg","T"],["cereal","T"],["toast","T"],["sandwich","T"],["pizza","T"],["pasta","T"],["chicken","T"],["fish","T"],["meat","T"],["soup","T"],["cheese","T"],["yogurt","T"],["chips","T"],["crisps","T"],["cake","T"],["chocolate","T"],["ice cream","T"],["sweets","T"],["orange","T"],["grapes","T"],["strawberry","T"],["pear","T"],["watermelon","T"],["mango","T"],["carrot","T"],["potato","T"],["peas","T"],["tomato","T"],["cucumber","T"],["salad","T"],["curry","T"],["noodles","T"],["popcorn","T"],["honey","T"]]],["drinks","Drinks",[["tea","T"],["hot chocolate","T"],["milkshake","T"],["smoothie","T"],["lemonade","T"],["cola","T"],["orange juice","T"],["apple juice","T"],["cup","T"],["bottle","T"],["straw","T"],["ice","T"]]],["play","Play",[["swing","T"],["ball","T"],["bubbles","T"],["music","T"],["blocks","T"],["slide","T"],["book","T"],["tablet","T"],["puzzle","T"],["doll","T"],["teddy","T"],["car","T"],["train","T"],["balloon","T"],["crayons","T"],["paint","T"],["playdough","T"],["sand","T"],["trampoline","T"],["bike","T"],["scooter","T"],["game","T"],["cards","T"],["television","T"],["computer","T"],["song","T"],["dance","T"],["hide and seek","T"],["tickle","T"],["chase","T"],["bounce","T"],["spin","T"],["draw","T"],["build","T"],["read","T"]]],["places","Places",[["home","T"],["school","T"],["park","T"],["toilet","T"],["car","T"],["outside","T"],["bed","T"],["shop","T"],["bedroom","T"],["kitchen","T"],["bathroom","T"],["garden","T"],["playground","T"],["beach","T"],["pool","T"],["zoo","T"],["farm","T"],["hospital","T"],["doctor's","T"],["library","T"],["restaurant","T"],["cinema","T"],["church","T"],["mosque","T"],["temple","T"],["grandma's house","T"],["friend's house","T"],["supermarket","T"]]],["school","School",[["class","T"],["teacher","T"],["pencil","T"],["pen","T"],["paper","T"],["scissors","T"],["glue","T"],["crayon","T"],["bag","T"],["desk","T"],["chair","T"],["book","T"],["computer","T"],["whiteboard","T"],["lunch box","T"],["break time","T"],["assembly","T"],["PE","T"],["art","T"],["music","T"],["maths","T"],["reading","T"],["writing","T"],["line up","T"],["sit down","T"],["stand up","T"],["quiet","T"],["help me","T"]]],["things","Home things",[["table","T"],["chair","T"],["sofa","T"],["door","T"],["window","T"],["light","T"],["bed","T"],["pillow","T"],["blanket","T"],["toothbrush","T"],["toothpaste","T"],["soap","T"],["towel","T"],["bath","T"],["shower","T"],["tap","T"],["plate","T"],["bowl","T"],["spoon","T"],["fork","T"],["knife","T"],["cup","T"],["phone","T"],["keys","T"],["remote","T"],["clock","T"],["fridge","T"],["oven","T"],["washing machine","T"],["bin","T"],["box","T"],["bag","T"]]],["clothes","Clothes",[["shirt","T"],["t-shirt","T"],["trousers","T"],["shorts","T"],["dress","T"],["skirt","T"],["jumper","T"],["coat","T"],["hat","T"],["shoes","T"],["socks","T"],["boots","T"],["pyjamas","T"],["pants","T"],["gloves","T"],["scarf","T"],["glasses","T"],["sandals","T"],["uniform","T"],["belt","T"]]],["animals","Animals",[["dog","T"],["cat","T"],["bird","T"],["fish","T"],["horse","T"],["cow","T"],["sheep","T"],["pig","T"],["chicken","T"],["duck","T"],["rabbit","T"],["mouse","T"],["elephant","T"],["lion","T"],["tiger","T"],["monkey","T"],["giraffe","T"],["bear","T"],["frog","T"],["snake","T"],["butterfly","T"],["bee","T"],["spider","T"],["dinosaur","T"],["zebra","T"],["penguin","T"],["whale","T"],["turtle","T"]]],["actions","Actions",[["run","A"],["walk","A"],["jump","A"],["sit","A"],["stand","A"],["sleep","A"],["wash","A"],["brush","A"],["cook","A"],["clean","A"],["cut","A"],["wash hands","A"],["kiss","A"],["hug","A"],["push","A"],["pull","A"],["throw","A"],["catch","A"],["kick","A"],["climb","A"],["swim","A"],["ride","A"],["sing","A"],["write","A"],["colour","A"],["cry","A"],["laugh","A"],["smile","A"],["talk","A"],["call","A"],["wake up","A"],["get dressed","A"],["go to bed","A"],["share","A"],["tidy up","A"],["finish","A"],["start","A"],["buy","A"],["pay","A"]]],["describe","Describing",[["big","D"],["small","D"],["long","D"],["short","D"],["tall","D"],["fast","D"],["slow","D"],["hot","D"],["cold","D"],["wet","D"],["dry","D"],["clean","D"],["dirty","D"],["loud","D"],["quiet","D"],["soft","D"],["hard","D"],["full","D"],["empty","D"],["new","D"],["old","D"],["open","D"],["closed","D"],["broken","D"],["yummy","D"],["yucky","D"],["red","D"],["blue","D"],["green","D"],["yellow","D"],["orange","D"],["pink","D"],["purple","D"],["black","D"],["white","D"],["brown","D"]]],["time","Time and weather",[["today","D"],["tomorrow","D"],["yesterday","D"],["morning","D"],["afternoon","D"],["night","D"],["now","D"],["later","D"],["soon","D"],["first","D"],["next","D"],["last","D"],["weekend","D"],["birthday","D"],["holiday","D"],["sunny","D"],["rainy","D"],["cloudy","D"],["windy","D"],["snow","D"],["hot","D"],["cold","D"],["rainbow","D"],["day","D"]]],["transport","Going out",[["bus","T"],["car","T"],["train","T"],["plane","T"],["boat","T"],["bike","T"],["taxi","T"],["walk","T"],["seat belt","T"],["road","T"],["traffic lights","T"],["ticket","T"]]],["care","Care",[["toilet","T"],["wash hands","T"],["bath","T"],["shower","T"],["brush teeth","T"],["hair brush","T"],["medicine","T"],["plaster","T"],["nappy","T"],["potty","T"],["sleep","T"],["rest","T"],["tissue","T"],["blow nose","T"],["cream","T"],["cut nails","T"]]]];
+const PAGES=[["core","Core"],...VOCAB.map(([id,n])=>[id,n])];
+const slug=l=>l.toLowerCase().replace(/['?]/g,"").replace(/ /g,"_");
+const STRIP=[["Stop","Stop"],["Break","I need a break"],["Help","Help me please"],["Too loud","It's too loud"],["Don't like","I don't like that"]];
+const TYPES=[["P","People words"],["A","Action words"],["D","Describing words"],["S","Social words"],["T","Things and places"]];
+const cid=l=>"core_"+l.toLowerCase().replace(/ /g,"_");
+const ROUTINES=[
+{id:"snack",name:"Snack time",w:["want","more","eat","drink","finished","open"],tip:"Point to \"more\" and \"eat\" as you say them. Pause and wait, don't ask a question.",ex:"\"You want more? Let's eat.\""},
+{id:"play",name:"Play",w:["go","play","again","turn","look","my"],tip:"Comment on what your child is doing. Tap one or two words, not whole sentences.",ex:"\"Ready, set... go! Again!\""},
+{id:"dress",name:"Getting dressed",w:["put","on","off","my","finished","different"],tip:"Model the word for each step as it happens. It's fine if your child just watches.",ex:"\"Shoes on. Put it on. Finished!\""},
+{id:"bed",name:"Bedtime",w:["go","feel","finished","look","in","off"],tip:"Keep it calm and slow. Model feelings words too, from the Feelings page.",ex:"\"Lights off. Feel sleepy? Go to bed.\""}];
+
+function defaults(){
+  const words=CORE.map(([l,t],i)=>({id:cid(l),label:l,spoken:l,type:t,page:"core",pos:i,hidden:false,core:true}));
+  words.forEach(w=>w.sym=w.label);
+  for(const [pg,,list] of VOCAB) list.forEach(([l,t,sp],i)=>words.push({id:pg+"_"+slug(l),label:l,spoken:sp||l,type:t,page:pg,pos:i,hidden:false,core:false,sym:l}));
+  return {v:2,words,
+    passport:{name:"",intro:"I understand more than I can say. Please give me time to answer.",
+      entries:[["Saying \"bye bye\"","I want to leave or stop this"],["Flapping my hands","I'm happy or excited"],["Covering my ears","It's too loud, please help"],["Leading you by the hand","Show me or help me"]],
+      upset:["Use fewer words and a calm voice","Offer my Break button","Give me a quiet space"],love:["Swings","Music","Bubbles"]},
+    settings:{rate:0.85,pitch:1.05,voice:"",each:true,pics:true,pin:""}};
+}
+
+let S=defaults(), PHOTOS={};
+function migrate(st){const d=defaults().words,byId={};st.words.forEach(w=>byId[w.id]=w);
+  for(const dw of d){const w=byId[dw.id];if(!w)st.words.push(dw);else if(w.sym===undefined)w.sym=dw.sym}
+  st.v=2;return st}
+const ui={page:"core",msg:[],routine:null,editPage:"core",editing:null,draftPic:undefined,draftType:"T"};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+
+// ---------- storage: browser copy first, then the signed-in copy ----------
+const LS="talkboard.v1",LSP="talkboard.photos.v1";
+try{const a=localStorage.getItem(LS);if(a)S=migrate(Object.assign(defaults(),JSON.parse(a)));const b=localStorage.getItem(LSP);if(b)PHOTOS=JSON.parse(b)}catch(e){}
+function save(){saveLocal()}
+function savePhoto(id){saveLocal()}
+function note(){let ok=true;try{localStorage.setItem("talkboard.test","1")}catch(e){ok=false}
+  $("savenote").textContent=ok?"Saved on this device, in this browser. Use Back up in Settings to keep a copy or move to another device.":"This browser isn't saving changes (private mode?). Use Back up in Settings before closing."}
+function saveLocal(){try{localStorage.setItem(LS,JSON.stringify(S));localStorage.setItem(LSP,JSON.stringify(PHOTOS))}catch(e){if(Object.keys(PHOTOS).length)toast("Storage is full. Remove some pictures or use smaller ones.")}}
+
+// ---------- speech ----------
+let voices=[],tts=null;
+function loadVoices(){try{voices=speechSynthesis.getVoices()||[]}catch(e){voices=[]}renderVoices()}
+try{speechSynthesis.onvoiceschanged=loadVoices}catch(e){}
+loadVoices();
+let lastU=null,deviceOK=false,useBackup=false;
+const hasSS=()=>{try{return "speechSynthesis" in window&&typeof SpeechSynthesisUtterance!=="undefined"}catch(e){return false}};
+function speakDevice(text){return new Promise((res,rej)=>{
+  if(!hasSS())return rej("none");
+  const st=S.settings;let started=false;const u=new SpeechSynthesisUtterance(text);lastU=u;
+  u.rate=st.rate;u.pitch=st.pitch;u.volume=1;
+  const v=voices.find(v=>v.voiceURI===st.voice)||(st.voice?null:calmVoice());if(v){u.voice=v;u.lang=v.lang}else u.lang=navigator.language||"en-US";
+  u.onstart=()=>{started=true;res()};u.onend=()=>{if(!started){started=true;res()}};
+  u.onerror=e=>{if(!started)rej(e&&e.error||"error")};
+  const go=()=>{try{if(speechSynthesis.paused)speechSynthesis.resume();speechSynthesis.speak(u)}catch(e){rej("error")}};
+  try{if(speechSynthesis.speaking||speechSynthesis.pending)speechSynthesis.cancel();go()}catch(e){rej("error")}
+  setTimeout(()=>{if(!started)rej("timeout")},2500)})}
+// Ranks voices by how calm and warm they tend to sound. Indian English female voices first, then other soft female voices.
+const CALM=[/neerja/i,/veena/i,/swara/i,/kavya/i,/aditi/i,/en-in.*female/i,/samantha/i,/karen/i,/moira/i,/tessa/i,/serena/i,/kate/i,/fiona/i,/sonia/i,/libby/i,/aria/i,/jenny/i,/zira/i,/google uk english female/i,/female/i,/google.*english/i];
+let calmCache=null,calmCount=-1;
+function calmVoice(){if(calmCount===voices.length)return calmCache;calmCount=voices.length;
+  const lang=(navigator.language||"en").slice(0,2).toLowerCase();let best=null,bestScore=-1;
+  for(const v of voices){const n=v.name+" "+v.lang;let sc=0;const i=CALM.findIndex(r=>r.test(n));if(i>=0)sc+=100-i*3;
+    if(/enhanced|premium|natural|neural/i.test(n))sc+=40;if(/compact|eloquence|novelty|whisper|zarvox|bad news|bells|boing|bubbles|cellos|jester|organ|superstar|trinoids|albert|fred|junior|ralph|grandpa|grandma|rocko|shelley|reed|sandy|eddy|flo/i.test(n))sc-=200;
+    if(v.lang&&v.lang.toLowerCase().startsWith(lang))sc+=30;if(v.localService)sc+=5;
+    if(sc>bestScore){bestScore=sc;best=v}}
+  return calmCache=bestScore>0?best:null}
+function speakBackup(text){return new Promise(res=>{let done=false;const fin=ok=>{if(!done){done=true;res(ok)}};
+  tts.speak(text,{rate:Math.min(1.5,Math.max(0.7,S.settings.rate))}).then(()=>fin(true)).catch(()=>fin(false));setTimeout(()=>fin(true),1500)})}
+// Some voices read a lone letter as a letter name ("capital I"). Say these words as sounds instead.
+const SAY_AS={"I":"eye","a":"uh","A":"uh"};
+async function speak(text){
+  if(!text)return;text=String(text).trim();if(SAY_AS[text])text=SAY_AS[text];
+  if(tts&&(S.settings.voice==="claude"||useBackup)){if(await speakBackup(text))return hideSound();}
+  try{await speakDevice(text);deviceOK=true;hideSound();return}
+  catch(e){if(deviceOK&&(e==="interrupted"||e==="canceled"))return}
+  try{speechSynthesis.cancel()}catch(e){}
+  if(tts&&await speakBackup(text)){useBackup=true;hideSound();toast("Using the backup voice");return}
+  showSound()}
+
+// iPhone and iPad: playing a silent sound inside the first tap switches the page's audio to "playback",
+// so speech is heard even when the ring/silent switch is on, and wakes the speech engine.
+let unlocked=false;const SILENT="data:audio/wav;base64,UklGRkQDAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YSADAACAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgA==";
+function unlockAudio(){if(unlocked)return;unlocked=true;
+  try{const a=new Audio(SILENT);a.setAttribute("playsinline","");a.play().catch(()=>{})}catch(e){}
+  try{const C=window.AudioContext||window.webkitAudioContext;if(C){const c=new C();const o=c.createBufferSource();o.buffer=c.createBuffer(1,1,22050);o.connect(c.destination);o.start(0);c.resume&&c.resume()}}catch(e){}
+  try{if(hasSS()){const w=new SpeechSynthesisUtterance(" ");w.volume=0;speechSynthesis.speak(w)}}catch(e){}}
+addEventListener("pointerdown",unlockAudio,{capture:true});addEventListener("touchstart",unlockAudio,{capture:true,passive:true});
+function showSound(){$("sound").classList.add("on")}
+function hideSound(){$("sound").classList.remove("on")}
+
+// ---------- board ----------
+const pageWords=p=>S.words.filter(w=>w.page===p).sort((a,b)=>a.pos-b.pos);
+// Built-in pictures: Mulberry Symbols (mulberrysymbols.org, CC BY-SA 2.0 UK) and OpenMoji (openmoji.org, CC BY-SA 4.0), in symbols.json.
+let SYM={};
+fetch("symbols.json").then(r=>r.ok?r.json():{}).then(d=>{SYM=d||{};renderAll();$("strip").innerHTML=stripHTML()}).catch(()=>{});
+const symCache={};const symURI=id=>SYM[id]?(symCache[id]||(symCache[id]="data:image/svg+xml,"+encodeURIComponent(SYM[id]))):null;
+function picHTML(w,cls){if(PHOTOS[w.id])return `<img class="${cls||""}" alt="" src="${PHOTOS[w.id]}">`;
+  if(w.emoji)return `<i class="emo ${cls||""}" aria-hidden="true">${esc(w.emoji)}</i>`;
+  const u=w.nosym?null:symURI(w.sym);return u?`<img class="sym ${cls||""}" alt="" src="${u}">`:""}
+function cellHTML(w,cls){const pic=S.settings.pics?picHTML(w):"";
+  return `<button class="cell ${w.type} ${cls}" data-id="${esc(w.id)}">${pic}<span>${esc(w.label)}</span></button>`}
+function renderGrid(){
+  const ws=pageWords(ui.page),by={};ws.forEach(w=>by[w.pos]=w);
+  const n=ws.length?Math.max(...ws.map(w=>w.pos))+1:0;
+  const hl=ui.routine&&ui.page==="core"?new Set(ui.routine.w.map(cid)):null;
+  const cols=colCount(),minRows=cols===8?6:cols===6?8:12;
+  $("grid").style.gridTemplateRows=`repeat(${Math.max(minRows,Math.ceil(n/cols))},minmax(70px,1fr))`;
+  let h="";for(let i=0;i<n;i++){const w=by[i];
+    if(!w||w.hidden){h+="<div aria-hidden=\"true\"></div>";continue}
+    h+=cellHTML(w,hl?(hl.has(w.id)?"model":"dim"):"")}
+  $("grid").innerHTML=h||`<p class="note">No words on this page yet. Adults can add some.</p>`;
+}
+function renderMsg(){
+  $("msg").innerHTML=ui.msg.length?ui.msg.map(w=>`<span class="chip ${w.type}">${S.settings.pics?picHTML(w):""}${esc(w.label)}</span>`).join(""):"<span class=\"hint\">Tap words to talk</span>";
+  $("msg").scrollLeft=$("msg").scrollWidth}
+const TABICON={core:"want",more:"help",chat:"hi",feelings:"happy",people:"family",body:"hand",food:"apple",drinks:"juice",play:"ball",places:"home",school:"school",things:"sofa",clothes:"t-shirt",animals:"dog",actions:"run",describe:"big",time:"sunny",transport:"bus",care:"toothbrush"};
+function renderTabs(){$("tabs").innerHTML=PAGES.map(([id,n])=>{const u=symURI(TABICON[id]);return `<button data-page="${id}" aria-pressed="${id===ui.page}">${u?`<img alt="" src="${u}">`:""}<span>${n}</span></button>`}).join("");
+  const on=$("tabs").querySelector("[aria-pressed=true]");if(on)on.scrollIntoView({block:"nearest",inline:"nearest"})}
+function renderBanner(){const r=ui.routine;$("banner").classList.toggle("on",!!r);
+  if(r){$("bname").textContent="Model with me: "+r.name;$("btip").textContent=r.tip+"  Try: "+r.ex}}
+const stripHTML=()=>STRIP.map(([l,s],i)=>{const u=symURI("#strip"+i);return `<button data-strip="${i}">${u?`<img alt="" src="${u}">`:""}${esc(l)}</button>`}).join("");
+$("strip").innerHTML=stripHTML();
+const colCount=()=>innerWidth<600?4:innerWidth<760?6:8;
+let lastCols=0;function fitCols(){const c=colCount();document.documentElement.style.setProperty("--cols",c);if(lastCols&&c!==lastCols)renderGrid();lastCols=c}
+addEventListener("resize",fitCols);fitCols();
+
+$("grid").addEventListener("click",e=>{const b=e.target.closest(".cell");if(!b)return;const w=S.words.find(x=>x.id===b.dataset.id);if(!w)return;
+  if(S.settings.each)speak(w.spoken||w.label);ui.msg.push(w);if(ui.msg.length>12)ui.msg.shift();renderMsg()});
+$("strip").addEventListener("click",e=>{const b=e.target.closest("button");if(b)speak(STRIP[+b.dataset.strip][1])});
+$("tabs").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;ui.page=b.dataset.page;renderTabs();renderGrid()});
+const sayAll=()=>speak(ui.msg.map(w=>w.spoken||w.label).join(" "));
+$("msg").onclick=sayAll;$("spk").onclick=sayAll;
+$("del").onclick=()=>{ui.msg.pop();renderMsg()};
+$("clr").onclick=()=>{ui.msg=[];renderMsg()};
+$("bend").onclick=()=>{ui.routine=null;renderBanner();renderGrid()};
+
+$("soundx").onclick=hideSound;
+
+// ---------- adult gate: hold 2 s ----------
+let holdT=null;const gate=$("gate");
+function holdEnd(){clearTimeout(holdT);gate.classList.remove("holding")}
+gate.addEventListener("pointerdown",e=>{e.preventDefault();gate.classList.add("holding");holdT=setTimeout(()=>{holdEnd();openAdult()},2000)});
+["pointerup","pointerleave","pointercancel"].forEach(t=>gate.addEventListener(t,holdEnd));
+gate.addEventListener("click",e=>{if(!gate.classList.contains("holding"))toast("Adults: press and hold for 2 seconds")});
+gate.addEventListener("contextmenu",e=>e.preventDefault());
+function openAdult(){if(S.settings.pin){pinMode="check";$("pintitle").textContent="Enter the adult PIN";$("pinin").value="";$("pinerr").textContent="";$("d-pin").classList.add("on");$("pinin").focus()}else go("menu")}
+
+// ---------- panels ----------
+function go(name){document.querySelectorAll(".panel").forEach(p=>p.classList.remove("on"));
+  if(name==="board"){renderGrid();return}
+  if(name==="passport")fillPassport();if(name==="settings")fillSettings();if(name==="edit")renderEdit();
+  $("p-"+name).classList.add("on");note()}
+document.addEventListener("click",e=>{const g=e.target.closest("[data-go]");if(!g)return;if(document.querySelector("#p-passport.on"))readPassport();go(g.dataset.go)});
+
+$("routines").innerHTML=ROUTINES.map((r,i)=>`<button class="mcard" data-r="${i}"><b>${esc(r.name)}</b><span>${esc(r.ex)} Highlights: ${esc(r.w.join(", "))}</span></button>`).join("");
+$("routines").onclick=e=>{const b=e.target.closest("[data-r]");if(!b)return;ui.routine=ROUTINES[+b.dataset.r];ui.page="core";renderTabs();renderBanner();go("board")};
+
+// ---------- edit words ----------
+function renderEdit(){
+  $("epages").innerHTML=PAGES.map(([id,n])=>`<button data-ep="${id}" aria-pressed="${id===ui.editPage}">${n}</button>`).join("");
+  $("enote").textContent=ui.editPage==="core"?"Core words keep their place so your child's hands learn where they are. You can hide them, rename them, or add a picture.":"Tap a word to change it, or add a new one. Familiar photos help a lot.";
+  $("ewords").innerHTML=pageWords(ui.editPage).map(w=>cellHTML(w,w.hidden?"hidden":"").replace("<button","<button data-edit=\"1\"")).join("");
+}
+$("epages").onclick=e=>{const b=e.target.closest("[data-ep]");if(b){ui.editPage=b.dataset.ep;renderEdit()}};
+$("ewords").onclick=e=>{const b=e.target.closest(".cell");if(b)openWord(S.words.find(w=>w.id===b.dataset.id))};
+$("eadd").onclick=()=>openWord(null);
+function openWord(w){
+  ui.editing=w;ui.draftPic=w?PHOTOS[w.id]||null:null;$("wemoji").value=w&&w.emoji||"";ui.draftType=w?w.type:(ui.editPage==="people"?"P":ui.editPage==="feelings"?"D":"T");
+  $("wtitle").textContent=w?`Change "${w.label}"`:"Add a word";
+  $("wlabel").value=w?w.label:"";$("wspoken").value=w&&w.spoken!==w.label?w.spoken:"";$("whide").checked=w?w.hidden:false;
+  $("wdel").style.display=w&&!w.core?"":"none";$("werr").textContent="";renderDraft();$("d-word").classList.add("on");$("wlabel").focus()}
+function renderDraft(){const e=$("wemoji").value.trim(),w=ui.editing,u=w&&!w.nosym?symURI(w.sym):null;
+  $("wthumb").innerHTML=ui.draftPic?`<img alt="" src="${ui.draftPic}">`:e?`<span style="font-size:52px">${esc(e)}</span>`:u?`<img alt="" src="${u}" style="object-fit:contain">`:"No picture";
+  $("wnopic").style.display=ui.draftPic?"":"none";
+  $("wtypes").innerHTML=TYPES.map(([k,n])=>`<button data-t="${k}" aria-pressed="${k===ui.draftType}">${n}</button>`).join("")}
+$("wtypes").onclick=e=>{const b=e.target.closest("[data-t]");if(b){ui.draftType=b.dataset.t;renderDraft()}};
+$("wnopic").onclick=()=>{ui.draftPic=null;renderDraft()};
+$("wemoji").oninput=renderDraft;
+$("wfile").onchange=e=>{const f=e.target.files&&e.target.files[0];e.target.value="";if(!f)return;
+  const img=new Image(),url=URL.createObjectURL(f);
+  img.onload=()=>{const m=256,k=Math.min(1,m/Math.max(img.width,img.height)),c=document.createElement("canvas");
+    c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+    ui.draftPic=c.toDataURL("image/jpeg",0.78);URL.revokeObjectURL(url);renderDraft()};
+  img.onerror=()=>{$("werr").textContent="That picture couldn't be opened. Try another one.";URL.revokeObjectURL(url)};img.src=url};
+const closeWord=()=>$("d-word").classList.remove("on");
+$("wcancel").onclick=closeWord;
+$("wsave").onclick=()=>{
+  const label=$("wlabel").value.trim();if(!label){$("werr").textContent="Type the word that goes on the button.";return}
+  const spoken=$("wspoken").value.trim()||label;let w=ui.editing;
+  const emoji=$("wemoji").value.trim();
+  if(w){Object.assign(w,{label,spoken,type:ui.draftType,hidden:$("whide").checked,emoji})}
+  else{const ws=pageWords(ui.editPage);w={id:"w_"+Math.random().toString(36).slice(2,10),label,spoken,type:ui.draftType,page:ui.editPage,
+    pos:ws.length?Math.max(...ws.map(x=>x.pos))+1:0,hidden:$("whide").checked,core:false,emoji};S.words.push(w)}
+  const before=PHOTOS[w.id]||null;if(ui.draftPic)PHOTOS[w.id]=ui.draftPic;else delete PHOTOS[w.id];
+  if((PHOTOS[w.id]||null)!==before)savePhoto(w.id);
+  ui.msg=ui.msg.map(m=>m.id===w.id?w:m);save();closeWord();renderEdit()};
+$("wdel").onclick=()=>{const w=ui.editing;if(!w||w.core)return;
+  S.words=S.words.filter(x=>x.id!==w.id);if(PHOTOS[w.id]){delete PHOTOS[w.id];savePhoto(w.id)}
+  ui.msg=ui.msg.filter(m=>m.id!==w.id);save();closeWord();renderEdit()};
+
+// ---------- passport ----------
+function fillPassport(){const p=S.passport;$("pname").value=p.name;$("pintro").value=p.intro;
+  $("pupset").value=p.upset.join("\n");$("plove").value=p.love.join("\n");renderEntries()}
+function renderEntries(){$("pentries").innerHTML=S.passport.entries.map(([a,b],i)=>`<div class="prow"><input type="text" data-e="${i}" data-k="0" value="${esc(a)}" aria-label="What I do or say" placeholder="What I do or say"><input type="text" data-e="${i}" data-k="1" value="${esc(b)}" aria-label="What it means" placeholder="What it means"><button class="plain" data-rm="${i}">Remove</button></div>`).join("")}
+function readPassport(){const p=S.passport,lines=v=>v.split("\n").map(s=>s.trim()).filter(Boolean);
+  p.name=$("pname").value.trim();p.intro=$("pintro").value.trim();p.upset=lines($("pupset").value);p.love=lines($("plove").value);
+  document.querySelectorAll("#pentries input").forEach(inp=>{const e=p.entries[+inp.dataset.e];if(e)e[+inp.dataset.k]=inp.value});save()}
+$("padd").onclick=()=>{readPassport();S.passport.entries.push(["",""]);renderEntries()};
+$("pentries").onclick=e=>{const b=e.target.closest("[data-rm]");if(!b)return;readPassport();S.passport.entries.splice(+b.dataset.rm,1);save();renderEntries()};
+function passportText(){const p=S.passport,e=p.entries.filter(([a,b])=>a.trim()||b.trim());
+  return [`How I communicate: ${p.name||"me"}`,"",p.intro,"","When I do this, I usually mean...",...e.map(([a,b])=>`- ${a}: ${b}`),"","What helps when I'm upset",...p.upset.map(s=>"- "+s),"","Things I love",p.love.join(", "),"","I use a talk board to communicate. Please let me use it at any time, and point to words on it when you talk to me."].join("\n")}
+function passportHTML(){const p=S.passport,e=p.entries.filter(([a,b])=>a.trim()||b.trim());
+  return `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>How I communicate</title><style>body{font:17px/1.5 system-ui,sans-serif;max-width:680px;margin:40px auto;padding:0 20px;color:#222}h1{font-size:28px;margin:0 0 8px}h2{font-size:18px;margin:28px 0 8px}dt{font-weight:700;margin-top:10px}dd{margin:2px 0 0 16px;color:#555}.foot{margin-top:32px;color:#555;border-top:1px solid #ccc;padding-top:12px}</style></head><body>
+<h1>How I communicate${p.name?": "+esc(p.name):""}</h1><p>${esc(p.intro)}</p>
+<h2>When I do this, I usually mean...</h2><dl>${e.map(([a,b])=>`<dt>${esc(a)}</dt><dd>${esc(b)}</dd>`).join("")}</dl>
+<h2>What helps when I'm upset</h2><ul>${p.upset.map(s=>`<li>${esc(s)}</li>`).join("")}</ul>
+<h2>Things I love</h2><p>${esc(p.love.join(", "))}</p>
+<p class="foot">I use a talk board to communicate. Please let me use it at any time, and point to words on it when you talk to me.</p></body></html>`}
+$("pexport").onclick=()=>{readPassport();const w=window.open("","_blank");if(!w){toast("Allow pop-ups to print, or use Download page.");return}
+  w.document.write(passportHTML().replace("</body>","<script>onload=()=>print()<\/script></body>"));w.document.close()};
+$("pdl").onclick=()=>{readPassport();download("how-i-communicate.html",passportHTML(),"text/html")};
+function download(name,text,type){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000)}
+$("pcopy").onclick=async()=>{readPassport();try{await navigator.clipboard.writeText(passportText());toast("Copied")}catch(e){toast("Couldn't copy here.")}};
+
+// ---------- settings ----------
+function renderVoices(){const sel=$("svoice");if(!sel)return;const cur=S.settings.voice;
+  let h=`<option value="">Automatic (calmest voice)</option>`;
+  h+=voices.map(v=>`<option value="${esc(v.voiceURI)}">${esc(v.name)} (${esc(v.lang)})</option>`).join("");
+  sel.innerHTML=h;sel.value=cur;if(sel.value!==cur)sel.value=""}
+function fillSettings(){const s=S.settings;renderVoices();
+  $("srate").value=s.rate;$("srate-v").textContent=s.rate.toFixed(1);$("spitch").value=s.pitch;$("spitch-v").textContent=s.pitch.toFixed(1);
+  $("seach").checked=s.each;$("spics").checked=s.pics;
+  $("spinnote").textContent=s.pin?"Adults hold the Adults button for 2 seconds, then enter the PIN.":"Adults open this area by holding the Adults button for 2 seconds. Add a PIN for extra safety.";
+  $("spin").textContent=s.pin?"Change PIN":"Set a PIN";$("sunpin").style.display=s.pin?"":"none"}
+$("svoice").onchange=e=>{S.settings.voice=e.target.value;save()};
+$("srate").oninput=e=>{S.settings.rate=+e.target.value;$("srate-v").textContent=S.settings.rate.toFixed(1)};$("srate").onchange=save;
+$("spitch").oninput=e=>{S.settings.pitch=+e.target.value;$("spitch-v").textContent=S.settings.pitch.toFixed(1)};$("spitch").onchange=save;
+$("stest").onclick=()=>speak("Hello. I'm here with you. Take your time.");
+$("scalm").onclick=()=>{const v=calmVoice();Object.assign(S.settings,{voice:v?v.voiceURI:"",rate:0.85,pitch:1.05});save();fillSettings();
+  speak("Hello. I'm here with you. Take your time.");toast(v?"Calm voice: "+v.name:"Calm settings on. Your device has one voice.")};
+$("seach").onchange=e=>{S.settings.each=e.target.checked;save()};
+$("spics").onchange=e=>{S.settings.pics=e.target.checked;save()};
+$("spin").onclick=()=>{pinMode="set";$("pintitle").textContent="Choose a 4-digit PIN";$("pinin").value="";$("pinerr").textContent="";$("d-pin").classList.add("on");$("pinin").focus()};
+$("sunpin").onclick=()=>{S.settings.pin="";save();fillSettings()};
+$("sfull").onclick=async()=>{try{await document.documentElement.requestFullscreen()}catch(e){toast("Full screen isn't available here.")}};
+let resetArmed=false;
+$("sreset").onclick=()=>{if(!resetArmed){resetArmed=true;$("sreset").textContent="Tap again to reset words (pictures are removed)";setTimeout(()=>{resetArmed=false;$("sreset").textContent="Reset words to the starting set"},5000);return}
+  resetArmed=false;const ids=Object.keys(PHOTOS);S.words=defaults().words;PHOTOS={};ids.forEach(savePhoto);ui.msg=[];save();$("sreset").textContent="Reset words to the starting set";toast("Words reset")};
+
+$("sbackup").onclick=()=>{download("talkboard-backup.json",JSON.stringify({app:"talkboard",v:1,state:S,photos:PHOTOS}),"application/json");toast("Backup downloaded")};
+$("srestore").onchange=e=>{const f=e.target.files&&e.target.files[0];e.target.value="";if(!f)return;f.text().then(t=>{const d=JSON.parse(t);
+  if(d.app!=="talkboard"||!d.state||!Array.isArray(d.state.words))throw 0;S=migrate(Object.assign(defaults(),d.state));PHOTOS=d.photos||{};ui.msg=[];save();fillSettings();renderAll();toast("Backup restored")}).catch(()=>toast("That file isn't a Talk Board backup."))};
+
+// ---------- PIN dialog ----------
+let pinMode="check";
+$("pinin").oninput=e=>{e.target.value=e.target.value.replace(/\D/g,"").slice(0,4)};
+$("pincancel").onclick=()=>$("d-pin").classList.remove("on");
+function pinOk(){const v=$("pinin").value;if(v.length!==4){$("pinerr").textContent="Use 4 digits.";return}
+  if(pinMode==="set"){S.settings.pin=v;save();$("d-pin").classList.remove("on");fillSettings();toast("PIN set");return}
+  if(v===S.settings.pin){$("d-pin").classList.remove("on");go("menu")}else{$("pinerr").textContent="That PIN didn't match. Try again.";$("pinin").value=""}}
+$("pinok").onclick=pinOk;$("pinin").onkeydown=e=>{if(e.key==="Enter")pinOk()};
+
+let toastT;function toast(t){$("toast").textContent=t;$("toast").classList.add("on");clearTimeout(toastT);toastT=setTimeout(()=>$("toast").classList.remove("on"),2600)}
+
+function renderAll(){renderTabs();renderGrid();renderMsg();renderBanner()}
+
+// ---------- how-to-use tour ----------
+const TOUR=[
+[null,"Welcome to Talk Board","This is a talking board. A child taps words to speak, and the device says them out loud. Here is a one-minute tour for adults."],
+["#grid","Tap a word to say it","Each button says its word out loud. The colours group the words: yellow for people, green for actions, blue for describing words, and pink for social words."],
+["#msg","Words build a sentence","Tapped words line up here. Tap Speak to say the whole sentence. Delete takes away the last word, and Clear empties the bar."],
+["#strip","Always-there buttons","These red buttons speak a full sentence straight away, on every page, so your child can always say stop, ask for a break, or ask for help."],
+["#tabs","More words","There are 19 pages and about 500 words: chat, feelings, people, food, play, school and more. Swipe this row sideways to see them all. Core is the main page. Its words never move, so your child's hands learn where they are."],
+["#gate","The adult area","Press and hold this button for 2 seconds. A quick tap does nothing, so your child is unlikely to open it. Inside, you can add family photos as words, change the voice, set a PIN, and fill in a \"How I communicate\" page for teachers."],
+["#gate","Teach by using it yourself","Children learn the board by watching you use it. In the adult area, choose Model with me and a routine such as snack time. A few words light up. Point to them as you talk, without asking your child to copy you."],
+["#msg","Try it now","Tap \"I\", \"want\", \"more\", then Speak. If you hear nothing, turn up the volume and check the device isn't on silent. Tap How to use any time to see this again."]];
+let tStep=0;
+function tourShow(){const [sel,title,text]=TOUR[tStep],spot=$("tspot"),card=$("tcard");
+  $("ttitle").textContent=title;$("ttext").textContent=text;$("tnum").textContent=(tStep+1)+" of "+TOUR.length;
+  $("tback").style.visibility=tStep?"visible":"hidden";$("tnext").textContent=tStep===TOUR.length-1?"Start":"Next";
+  const el=sel&&document.querySelector(sel);const W=innerWidth,H=innerHeight,cw=card.offsetWidth,ch=card.offsetHeight,m=12;
+  if(!el){spot.classList.add("none");card.style.left=(W-cw)/2+"px";card.style.top=Math.max(m,(H-ch)/2)+"px";return}
+  spot.classList.remove("none");const r=el.getBoundingClientRect(),pad=6;
+  Object.assign(spot.style,{left:r.left-pad+"px",top:r.top-pad+"px",width:r.width+2*pad+"px",height:r.height+2*pad+"px"});
+  let top;if(r.bottom+pad+m+ch<=H)top=r.bottom+pad+m;else if(r.top-pad-m-ch>=0)top=r.top-pad-m-ch;else top=Math.max(m,r.top+(r.height-ch)/2);
+  let left=Math.min(Math.max(m,r.left+r.width/2-cw/2),W-cw-m);card.style.top=top+"px";card.style.left=left+"px"}
+function tourOpen(){document.querySelectorAll(".panel").forEach(p=>p.classList.remove("on"));ui.page="core";renderTabs();renderGrid();tStep=0;$("tour").classList.add("on");tourShow();$("tnext").focus()}
+function tourClose(){$("tour").classList.remove("on");try{localStorage.setItem("talkboard.toured","1")}catch(e){}}
+$("tnext").onclick=()=>{if(tStep<TOUR.length-1){tStep++;tourShow()}else tourClose()};
+$("tback").onclick=()=>{if(tStep){tStep--;tourShow()}};
+$("tskip").onclick=tourClose;
+$("guide").onclick=tourOpen;$("mguide").onclick=tourOpen;
+addEventListener("resize",()=>{if($("tour").classList.contains("on"))tourShow()});
+addEventListener("keydown",e=>{if(!$("tour").classList.contains("on"))return;if(e.key==="Escape")tourClose();if(e.key==="ArrowRight")$("tnext").click();if(e.key==="ArrowLeft")$("tback").click()});
+{let seen=false;try{seen=localStorage.getItem("talkboard.toured")==="1"}catch(e){}if(!seen)setTimeout(tourOpen,400)}
+renderAll();note();
+if("serviceWorker" in navigator&&location.protocol.startsWith("http"))navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
+</script>
+</body>
+</html>
