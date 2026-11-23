@@ -118,6 +118,12 @@ h3{margin:10px 0 0;font-size:18px}
 .cell img.sym,#msg .chip img,#tabs img,#strip img,#wthumb img{background:#fff;border-radius:6px;padding:2px;box-sizing:border-box}
 @media(max-width:700px){#board{gap:6px}.bar{height:60px}.bb{width:64px;font-size:15px}.bb.speak{width:76px}#gate{width:60px}.main{grid-template-columns:minmax(0,1fr) 88px}#strip button{font-size:15px}#tabs{height:56px}#tabs button{font-size:14px;min-width:92px}#tabs img{width:28px;height:28px}}
 @media(max-width:600px){.bb{width:56px;font-size:14px}.bb.speak{width:66px}#gate{width:54px;font-size:11px}#msg .chip{font-size:18px}.main{grid-template-columns:minmax(0,1fr) 78px}#tabs{height:56px}#banner span{font-size:13px}}
+/* big picture that pops up for a moment when a word is tapped; it never blocks the next tap */
+#pop{position:fixed;left:50%;top:50%;z-index:8;pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:8px;background:#fff;color:#232323;border:4px solid var(--accent);border-radius:24px;padding:16px 22px 12px;box-shadow:0 12px 40px rgb(0 0 0/.35);opacity:0;transform:translate(-50%,-50%) scale(.6);transition:opacity .18s ease,transform .22s ease;font-weight:700;font-size:30px}
+#pop.on{opacity:1;transform:translate(-50%,-50%) scale(1)}
+#pop img{width:min(46vmin,260px);height:min(46vmin,260px);object-fit:contain;border-radius:14px}
+#pop .emo{font-style:normal;font-size:min(36vmin,200px);line-height:1.1}
+@media(prefers-reduced-motion:reduce){#pop{transition:opacity .15s}#pop,#pop.on{transform:translate(-50%,-50%)}}
 @media(prefers-reduced-motion:reduce){.cell{transition:none}#gate.holding circle{transition:stroke-dashoffset 2s steps(1)}}
 
 #tour{position:fixed;inset:0;z-index:20;display:none}
@@ -220,6 +226,7 @@ h3{margin:10px 0 0;font-size:18px}
     <button class="plain" id="stest" style="align-self:flex-start">Hear a preview</button>
     <label class="tog">Say each word when tapped<input type="checkbox" id="seach"></label>
     <label class="tog">Show pictures on buttons<input type="checkbox" id="spics"></label>
+    <label class="tog">Show a big picture when a word is tapped<input type="checkbox" id="spop"></label>
     <p class="credit">Built-in pictures: <a href="https://mulberrysymbols.org" target="_blank" rel="noopener">Mulberry Symbols</a> (CC BY-SA 2.0 UK), an AAC symbol set, and <a href="https://openmoji.org" target="_blank" rel="noopener">OpenMoji</a> (CC BY-SA 4.0). Your own photos replace them.</p>
     <h3>Adult lock</h3>
     <p class="note" id="spinnote"></p>
@@ -292,7 +299,7 @@ function defaults(){
     passport:{name:"",intro:"I understand more than I can say. Please give me time to answer.",
       entries:[["Saying \"bye bye\"","I want to leave or stop this"],["Flapping my hands","I'm happy or excited"],["Covering my ears","It's too loud, please help"],["Leading you by the hand","Show me or help me"]],
       upset:["Use fewer words and a calm voice","Offer my Break button","Give me a quiet space"],love:["Swings","Music","Bubbles"]},
-    settings:{rate:0.85,pitch:1.05,voice:"",each:true,pics:true,pin:""}};
+    settings:{rate:0.85,pitch:1.05,voice:"",each:true,pics:true,pop:true,pin:""}};
 }
 
 let S=defaults(), PHOTOS={};
@@ -402,8 +409,8 @@ let lastCols=0;function fitCols(){const c=colCount();document.documentElement.st
 addEventListener("resize",fitCols);fitCols();
 
 $("grid").addEventListener("click",e=>{const b=e.target.closest(".cell");if(!b)return;const w=S.words.find(x=>x.id===b.dataset.id);if(!w)return;
-  if(S.settings.each)speak(w.spoken||w.label);ui.msg.push(w);if(ui.msg.length>12)ui.msg.shift();renderMsg()});
-$("strip").addEventListener("click",e=>{const b=e.target.closest("button");if(b)speak(STRIP[+b.dataset.strip][1])});
+  if(S.settings.each)speak(w.spoken||w.label);showPop(picHTML(w),w.label);ui.msg.push(w);if(ui.msg.length>12)ui.msg.shift();renderMsg()});
+$("strip").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;speak(STRIP[+b.dataset.strip][1]);const u=symURI("#strip"+b.dataset.strip);if(u)showPop(`<img alt="" src="${u}">`,STRIP[+b.dataset.strip][0])});
 $("tabs").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;ui.page=b.dataset.page;renderTabs();renderGrid()});
 const sayAll=()=>speak(ui.msg.map(w=>w.spoken||w.label).join(" "));
 $("msg").onclick=sayAll;$("spk").onclick=sayAll;
@@ -506,7 +513,7 @@ function renderVoices(){const sel=$("svoice");if(!sel)return;const cur=S.setting
   sel.innerHTML=h;sel.value=cur;if(sel.value!==cur)sel.value=""}
 function fillSettings(){const s=S.settings;renderVoices();
   $("srate").value=s.rate;$("srate-v").textContent=s.rate.toFixed(1);$("spitch").value=s.pitch;$("spitch-v").textContent=s.pitch.toFixed(1);
-  $("seach").checked=s.each;$("spics").checked=s.pics;
+  $("seach").checked=s.each;$("spics").checked=s.pics;$("spop").checked=s.pop!==false;
   $("spinnote").textContent=s.pin?"Adults hold the Adults button for 2 seconds, then enter the PIN.":"Adults open this area by holding the Adults button for 2 seconds. Add a PIN for extra safety.";
   $("spin").textContent=s.pin?"Change PIN":"Set a PIN";$("sunpin").style.display=s.pin?"":"none"}
 $("svoice").onchange=e=>{S.settings.voice=e.target.value;save()};
@@ -517,6 +524,10 @@ $("scalm").onclick=()=>{const v=calmVoice();Object.assign(S.settings,{voice:v?v.
   speak("Hello. I'm here with you. Take your time.");toast(v?"Calm voice: "+v.name:"Calm settings on. Your device has one voice.")};
 $("seach").onchange=e=>{S.settings.each=e.target.checked;save()};
 $("spics").onchange=e=>{S.settings.pics=e.target.checked;save()};
+$("spop").onchange=e=>{S.settings.pop=e.target.checked;save()};
+let popT;function showPop(pic,label){if(S.settings.pop===false||!pic)return;let el=$("pop");if(!el){el=document.createElement("div");el.id="pop";el.setAttribute("aria-hidden","true");document.body.appendChild(el)}
+  el.innerHTML=pic+`<span>${esc(label)}</span>`;el.querySelectorAll("img").forEach(i=>i.removeAttribute("class"));el.classList.remove("on");void el.offsetWidth;el.classList.add("on");
+  clearTimeout(popT);popT=setTimeout(()=>el.classList.remove("on"),1100)}
 $("spin").onclick=()=>{pinMode="set";$("pintitle").textContent="Choose a 4-digit PIN";$("pinin").value="";$("pinerr").textContent="";$("d-pin").classList.add("on");$("pinin").focus()};
 $("sunpin").onclick=()=>{S.settings.pin="";save();fillSettings()};
 $("sfull").onclick=async()=>{try{await document.documentElement.requestFullscreen()}catch(e){toast("Full screen isn't available here.")}};
