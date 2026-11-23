@@ -1,5 +1,5 @@
 // Keeps Talk Board working without internet once it has been opened.
-const CACHE = "talkboard-v8";
+const CACHE = "talkboard-v9";
 const CORE = ["./", "index.html", "manifest.webmanifest", "icon.svg", "icon-192.png", "icon-512.png", "symbols.json"];
 
 self.addEventListener("install", e => {
